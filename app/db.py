@@ -42,26 +42,38 @@ def load_db_config() -> Dict[str, Any]:
 
 def connect_db() -> Optional[mysql.connector.MySQLConnection]:
     """
-    Establish a connection to the MySQL database.
+    Establece una conexión a la base de datos MySQL.
+    
+    Esta función es fundamental para el tutorial - todas las operaciones 
+    de base de datos la utilizan. Demuestra cómo manejar configuración,
+    conexiones y diferentes tipos de errores apropiadamente.
 
     Returns:
-        MySQL connection object if successful, None otherwise
+        Objeto de conexión MySQL si es exitoso, None en caso contrario
 
     Raises:
-        Error: MySQL connection error with details
+        Error: Error de conexión MySQL con detalles específicos
     """
     try:
+        # Cargar configuración desde variables de entorno
         config = load_db_config()
+        
+        # Establecer conexión usando desempaquetado de diccionario
+        # **config equivale a: mysql.connector.connect(host=..., port=..., etc.)
         connection = mysql.connector.connect(**config)
         return connection
+        
     except Error as err:
-        if err.errno == 2003:
+        # Manejo específico de errores comunes de MySQL
+        if err.errno == 2003:  # Error: no puede conectar al servidor
             raise Error(
                 "Cannot connect to MySQL server. Is the database running?"
             )
         else:
             raise Error(f"Database connection failed: {err}")
+            
     except ValueError as err:
+        # Error de configuración (variables de entorno faltantes)
         raise Error(f"Configuration error: {err}")
 
 
@@ -268,43 +280,42 @@ def get_task_by_id(task_id: int) -> Tuple[bool, Optional[Dict[str, Any]], str]:
 
 def update_task_status(task_id: int, status: str) -> Tuple[bool, str]:
     """
-    Update the status of a task.
+    [EJERCICIO] Actualizar el estado de una tarea existente.
+    
+    Esta función debe cambiar el estado de una tarea específica a un nuevo valor.
+    Primero debe validar que el estado sea válido, luego conectarse a la base de 
+    datos y ejecutar la actualización.
+
+    Instrucciones:
+    1. Validar que el status esté en la lista de estados válidos
+    2. Si no es válido, retornar False con mensaje de error
+    3. Conectarse a la base de datos usando connect_db()
+    4. Crear cursor y ejecutar consulta UPDATE
+    5. Verificar que se actualizó al menos un registro (cursor.rowcount)
+    6. Manejar el caso donde la tarea no existe
+    7. Cerrar recursos y manejar errores apropiadamente
+
+    Pistas:
+    - Estados válidos: ["pending", "in_progress", "completed"]
+    - Consulta SQL: "UPDATE tasks SET status = %s WHERE id = %s"
+    - Parámetros en orden: (status, task_id)
+    - Si cursor.rowcount == 0, la tarea no existe
+    - Usar try/except/finally para manejo seguro de recursos
+    - Observar create_task() para ver el patrón de conexión y manejo de errores
 
     Args:
-        task_id: The task ID to update
-        status: New status - 'pending', 'in_progress', or 'completed'
+        task_id: ID de la tarea a actualizar
+        status: Nuevo estado - 'pending', 'in_progress', o 'completed'
 
     Returns:
-        Tuple of (success: bool, message: str)
+        Tupla de (éxito: bool, mensaje: str)
+        - True, "Mensaje de éxito" si se actualizó correctamente
+        - False, "Mensaje de error" si hubo problemas, estado inválido, o tarea no encontrada
     """
-    valid_statuses = ["pending", "in_progress", "completed"]
-    if status not in valid_statuses:
-        return (
-            False,
-            f"Invalid status. Must be one of: {', '.join(valid_statuses)}",
-        )
-
-    connection = None
-    try:
-        connection = connect_db()
-        cursor = connection.cursor()
-
-        update_query = "UPDATE tasks SET status = %s WHERE id = %s"
-        cursor.execute(update_query, (status, task_id))
-        connection.commit()
-
-        if cursor.rowcount == 0:
-            cursor.close()
-            return False, f"Task {task_id} not found"
-
-        cursor.close()
-        return True, f"Task {task_id} status updated to '{status}'"
-
-    except Error as err:
-        return False, f"Failed to update task status: {err}"
-    finally:
-        if connection and connection.is_connected():
-            connection.close()
+    # TODO: Implementar esta función siguiendo las instrucciones
+    # Recuerda validar el estado antes de conectar a la base de datos
+    # Usa las otras funciones como referencia para el manejo de conexiones
+    pass
 
 
 def update_task(
@@ -369,35 +380,38 @@ def update_task(
 
 def delete_task(task_id: int) -> Tuple[bool, str]:
     """
-    Delete a task from the database.
+    [EJERCICIO] Eliminar una tarea de la base de datos.
+    
+    Esta función debe conectarse a la base de datos y eliminar la tarea 
+    especificada por su ID. Es importante manejar casos donde la tarea 
+    no existe y gestionar errores de conexión apropiadamente.
+
+    Instrucciones:
+    1. Obtener una conexión a la base de datos usando connect_db()
+    2. Crear un cursor para ejecutar la consulta
+    3. Ejecutar una consulta DELETE con el ID de la tarea
+    4. Verificar si realmente se eliminó algún registro (usar cursor.rowcount)
+    5. Manejar el caso donde la tarea no existe
+    6. Cerrar recursos y manejar errores con try/except/finally
+
+    Pistas:
+    - Consulta SQL: "DELETE FROM tasks WHERE id = %s"
+    - Si cursor.rowcount == 0, significa que no se encontró la tarea
+    - Usar parámetros para evitar SQL injection: cursor.execute(query, (task_id,))
+    - No olvides hacer commit() para confirmar los cambios
+    - Revisar las otras funciones como referencia para el manejo de conexiones
 
     Args:
-        task_id: The task ID to delete
+        task_id: ID de la tarea a eliminar
 
     Returns:
-        Tuple of (success: bool, message: str)
+        Tupla de (éxito: bool, mensaje: str)
+        - True, "Mensaje de éxito" si la tarea se eliminó
+        - False, "Mensaje de error" si hubo problemas o no se encontró
     """
-    connection = None
-    try:
-        connection = connect_db()
-        cursor = connection.cursor()
-
-        delete_query = "DELETE FROM tasks WHERE id = %s"
-        cursor.execute(delete_query, (task_id,))
-        connection.commit()
-
-        if cursor.rowcount == 0:
-            cursor.close()
-            return False, f"Task {task_id} not found"
-
-        cursor.close()
-        return True, f"Task {task_id} deleted successfully"
-
-    except Error as err:
-        return False, f"Failed to delete task: {err}"
-    finally:
-        if connection and connection.is_connected():
-            connection.close()
+    # TODO: Implementar esta función siguiendo las instrucciones
+    # Puedes usar create_task() y update_task_status() como referencia
+    pass
 
 
 def get_tasks_by_status(status: str) -> Tuple[bool, List[Dict[str, Any]], str]:
