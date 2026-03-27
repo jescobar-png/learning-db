@@ -2,6 +2,8 @@
 
 A practical database learning project demonstrating a complete Python application connected to a MySQL database using Docker.
 
+📖 **Available in other languages**: [Español (Spanish)](README_ES.md)
+
 ## Overview
 
 This project teaches database fundamentals by building a simple task management system with:
@@ -67,8 +69,8 @@ project/
 cd db-tutorial
 
 # Create virtual environment (optional but recommended)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
